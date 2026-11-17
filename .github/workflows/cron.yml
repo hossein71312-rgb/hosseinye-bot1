@@ -1,0 +1,43 @@
+name: Nature Iran Photo Publisher
+
+# زمان‌بندی را cron-job.org انجام می‌دهد (workflow dispatch).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nature-iran-publisher
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Publish one photo
+        env:
+          RUBIKA_BOT_TOKEN: ${{ secrets.RUBIKA_BOT_TOKEN }}
+          RUBIKA_CHANNEL_ID: ${{ secrets.RUBIKA_CHANNEL_ID }}
+        run: python main.py
+
+      - name: Save history
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add database/published.json
+          git diff --cached --quiet || git commit -m "Update published history"
+          git push
